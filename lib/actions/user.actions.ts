@@ -105,7 +105,7 @@ export async function fetchUsers({
       id: { $ne: userId },
     };
 
-    if (searchTerm.trim() !== '') {
+    if (searchTerm.trim() !== "") {
       query.$text = { $search: searchTerm };
     }
 
@@ -123,5 +123,33 @@ export async function fetchUsers({
   } catch (error: unknown) {
     if (error instanceof Error)
       throw new Error(`Failed fetching users ${error.message}`);
+  }
+}
+
+export async function getActivity(userId: string) {
+  try {
+    connectToDB();
+
+    const userThreads = await Thread.find({ author: userId });
+
+    // get all comments of all user threads
+    const commentIds = userThreads.reduce((acc, userThread) => {
+      return acc.concat(userThread.children);
+    }, []);
+
+    // get comments excluding ones created by the user
+    const comments = await Thread.find({
+      _id: { $in: commentIds },
+      author: { $ne: userId },
+    }).populate({
+      path: "author",
+      model: User,
+      select: "_id name image",
+    });
+
+    return comments; 
+  } catch (error: unknown) {
+    if (error instanceof Error)
+      throw new Error(`Failed fetching activities ${error.message}`);
   }
 }
