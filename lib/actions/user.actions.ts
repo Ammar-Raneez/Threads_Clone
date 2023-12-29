@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { connectToDB } from "../mongoose";
 import User from "../models/user.model";
+import Thread from "../models/thread.model";
 
 export async function fetchUser(userId: string) {
   try {
@@ -22,7 +23,7 @@ interface UpdateUserParams {
   bio: string;
   image: string;
   path: string;
-};
+}
 
 export async function updateUser({
   userId,
@@ -50,5 +51,31 @@ export async function updateUser({
   } catch (error) {
     if (error instanceof Error)
       throw new Error(`Failed to create/update user: ${error.message}`);
+  }
+}
+
+export async function fetchUserPosts(userId: string) {
+  try {
+    connectToDB();
+    const threads = await User.findOne({  id: userId }).populate({
+      path: "threads",
+      model: Thread,
+      populate: [
+        {
+          path: "children",
+          model: Thread,
+          populate: {
+            path: "author",
+            model: User,
+            select: "name image id",
+          },
+        },
+      ],
+    });
+
+    return threads;
+  } catch (error: unknown) {
+    if (error instanceof Error)
+      throw new Error(`Failed fetching user threads: ${error.message}`);
   }
 }
