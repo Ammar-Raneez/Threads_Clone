@@ -24,7 +24,7 @@ import { isBase64Image } from "@/lib/utils";
 import { useUploadThing } from "@/lib/uploadthing";
 import { updateUser } from "@/lib/actions/user.actions";
 
-type Props = {
+interface Props {
   user: {
     id: string;
     objectId: string;

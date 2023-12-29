@@ -15,7 +15,7 @@ export async function fetchUser(userId: string) {
   }
 }
 
-type UpdateUserParams = {
+interface UpdateUserParams {
   userId: string;
   username: string;
   name: string;

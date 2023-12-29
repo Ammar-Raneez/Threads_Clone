@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: "Threads clone",
 };
 
-type RootLayoutProps = {
+interface RootLayoutProps {
   children: React.ReactNode;
 };
 
