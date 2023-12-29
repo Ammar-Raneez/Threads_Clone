@@ -1,4 +1,3 @@
-
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -7,18 +6,46 @@ import Thread from "../models/thread.model";
 import User from "../models/user.model";
 import { connectToDB } from "../mongoose";
 
-interface CreateThreadParams {
-  text: string,
-  author: string,
-  communityId: string | null,
-  path: string,
+export async function fetchPosts(pageNumber = 1, pageSize = 20) {
+  connectToDB();
+  const skipAmount = (pageNumber - 1) * pageSize;
+
+  // limit and paginate
+  const postsQuery = Thread.find({ parentId: { $in: [null, undefined] } })
+    .skip(skipAmount)
+    .limit(pageSize)
+    .populate({ path: "author", model: User }) // populate author with the user document itself
+    .populate({
+      path: "children",
+      populate: {
+        path: "author",
+        model: User,
+        select: "_id name parentId image",
+      },
+    });
+
+  // how many are there in total
+  const totalPosts = await Thread.countDocuments({
+    parentId: { $in: [null, undefined] },
+  });
+
+  const posts = await postsQuery.exec();
+  const hasNext = totalPosts > skipAmount + posts.length;
+  return { posts, hasNext };
 }
 
-export async function createThread ({
+interface CreateThreadParams {
+  text: string;
+  author: string;
+  communityId: string | null;
+  path: string;
+}
+
+export async function createThread({
   text,
   author,
   communityId,
-  path
+  path,
 }: CreateThreadParams) {
   try {
     connectToDB();
@@ -38,4 +65,4 @@ export async function createThread ({
     if (error instanceof Error)
       throw new Error(`Failed to create thread: ${error.message}`);
   }
-};
+}

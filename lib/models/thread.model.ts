@@ -21,6 +21,7 @@ const threadSchema = new mongoose.Schema({
   parentId: {
     type: String,
   },
+  // a thread can have more threads
   children: [
     {
       type: mongoose.Schema.Types.ObjectId,
