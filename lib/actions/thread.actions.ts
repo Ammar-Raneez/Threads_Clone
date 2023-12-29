@@ -6,7 +6,7 @@ import Thread from "../models/thread.model";
 import User from "../models/user.model";
 import { connectToDB } from "../mongoose";
 
-export async function fetchPosts(pageNumber = 1, pageSize = 20) {
+export async function fetchPosts(pageNumber = 1, pageSize = 10) {
   connectToDB();
   const skipAmount = (pageNumber - 1) * pageSize;
 

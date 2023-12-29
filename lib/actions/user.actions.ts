@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { connectToDB } from "../mongoose";
 import User from "../models/user.model";
 import Thread from "../models/thread.model";
+import { FilterQuery } from "mongoose";
 
 export async function fetchUser(userId: string) {
   try {
@@ -57,7 +58,7 @@ export async function updateUser({
 export async function fetchUserPosts(userId: string) {
   try {
     connectToDB();
-    const threads = await User.findOne({  id: userId }).populate({
+    const threads = await User.findOne({ id: userId }).populate({
       path: "threads",
       model: Thread,
       populate: [
@@ -77,5 +78,50 @@ export async function fetchUserPosts(userId: string) {
   } catch (error: unknown) {
     if (error instanceof Error)
       throw new Error(`Failed fetching user threads: ${error.message}`);
+  }
+}
+
+interface FetchUsersParams {
+  userId: string;
+  pageNumber: number;
+  pageSize: number;
+  searchTerm?: string;
+  sortBy?: "asc" | "desc";
+}
+
+export async function fetchUsers({
+  userId,
+  searchTerm = "",
+  pageNumber = 1,
+  pageSize = 10,
+  sortBy = "desc",
+}: FetchUsersParams) {
+  try {
+    connectToDB();
+    const skipAmount = (pageNumber - 1) * pageSize;
+
+    // everyone except current user
+    const query: FilterQuery<typeof User> = {
+      id: { $ne: userId },
+    };
+
+    if (searchTerm.trim() !== '') {
+      query.$text = { $search: searchTerm };
+    }
+
+    const sortOptions = { createdAt: sortBy };
+    const usersQuery = User.find(query)
+      .sort(sortOptions)
+      .skip(skipAmount)
+      .limit(pageSize);
+
+    const totalUserCount = await User.countDocuments(query);
+    const users = await usersQuery.exec();
+    const hasNext = totalUserCount > skipAmount + users.length;
+
+    return { users, hasNext };
+  } catch (error: unknown) {
+    if (error instanceof Error)
+      throw new Error(`Failed fetching users ${error.message}`);
   }
 }
