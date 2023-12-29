@@ -43,6 +43,7 @@ function PostThread({ userId }: Props) {
       path: pathname,
     });
 
+    form.reset();
     router.push("/");
   };
 
