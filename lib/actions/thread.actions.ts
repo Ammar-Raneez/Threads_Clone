@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 
-import Thread from "../models/thread.model";
-import User from "../models/user.model";
-import { connectToDB } from "../mongoose";
+import Thread from "@/lib/models/thread.model";
+import User from "@/lib/models/user.model";
+import { connectToDB } from "@/lib/mongoose";
 
 export async function fetchPosts(pageNumber = 1, pageSize = 10) {
   connectToDB();

@@ -1,11 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-
-import { connectToDB } from "../mongoose";
-import User from "../models/user.model";
-import Thread from "../models/thread.model";
 import { FilterQuery } from "mongoose";
+
+import User from "@/lib/models/user.model";
+import Thread from "@/lib/models/thread.model";
+import { connectToDB } from "@/lib/mongoose";
 
 export async function fetchUser(userId: string) {
   try {
@@ -126,11 +126,16 @@ export async function fetchUsers({
   }
 }
 
-export async function getActivity(userId: string) {
+export async function getActivity(
+  userId: string,
+  pageNumber = 1,
+  pageSize = 10
+) {
   try {
     connectToDB();
 
     const userThreads = await Thread.find({ author: userId });
+    const skipAmount = (pageNumber - 1) * pageSize;
 
     // get all comments of all user threads
     const commentIds = userThreads.reduce((acc, userThread) => {
@@ -138,16 +143,23 @@ export async function getActivity(userId: string) {
     }, []);
 
     // get comments excluding ones created by the user
-    const comments = await Thread.find({
+    const query = {
       _id: { $in: commentIds },
       author: { $ne: userId },
-    }).populate({
-      path: "author",
-      model: User,
-      select: "_id name image",
-    });
+    };
 
-    return comments; 
+    const comments = await Thread.find(query)
+      .skip(skipAmount)
+      .limit(pageSize)
+      .populate({
+        path: "author",
+        model: User,
+        select: "_id name image",
+      });
+
+    const totalComments = await Thread.countDocuments(query);
+    const hasNext = totalComments > skipAmount + comments.length;
+    return { comments, hasNext }; 
   } catch (error: unknown) {
     if (error instanceof Error)
       throw new Error(`Failed fetching activities ${error.message}`);
