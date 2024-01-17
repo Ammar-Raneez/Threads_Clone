@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import Thread from "@/lib/models/thread.model";
 import User from "@/lib/models/user.model";
+import Community from "@/lib/models/community.model";
 import { connectToDB } from "@/lib/mongoose";
 
 export async function fetchPosts(pageNumber = 1, pageSize = 10) {
@@ -12,9 +13,11 @@ export async function fetchPosts(pageNumber = 1, pageSize = 10) {
 
   // limit and paginate
   const postsQuery = Thread.find({ parentId: { $in: [null, undefined] } })
+    .sort({ createdAt: "desc" })
     .skip(skipAmount)
     .limit(pageSize)
     .populate({ path: "author", model: User }) // populate author with the user document itself
+    .populate({ path: "community", model: Community }) // populate community with the community document itself
     .populate({
       path: "children",
       populate: {
@@ -50,10 +53,15 @@ export async function createThread({
   try {
     connectToDB();
 
+    const communityIdObject = await Community.findOne(
+      { id: communityId },
+      { _id: 1 }
+    );
+
     const createdThread = await Thread.create({
       text,
       author,
-      community: null,
+      community: communityIdObject,
     });
 
     await User.findByIdAndUpdate(author, {
@@ -75,6 +83,11 @@ export async function fetchThreadById(id: string) {
       .populate({
         path: "author",
         model: User,
+        select: "_id id name image",
+      })
+      .populate({
+        path: "community",
+        model: Community,
         select: "_id id name image",
       })
       .populate({
